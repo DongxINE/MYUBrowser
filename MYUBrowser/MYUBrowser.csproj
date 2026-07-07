@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>MYUBrowser</RootNamespace>
+    <AssemblyName>MYUBrowser</AssemblyName>
+    <Product>MYU Browser</Product>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Company>无用商店</Company>
+    <Authors></Authors>
+    <PackageIcon></PackageIcon>
+    <ApplicationIcon>favicon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="ProductResource\favicon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="ProductResource\图标.jpg">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+	<Target Name="PostPublishScript" AfterTargets="Publish" Condition="'$(CI)' != 'true'">
+		<Exec Command="powershell -ExecutionPolicy Bypass -File pack.ps1 &quot;$(PublishDir.TrimEnd('\'))&quot;" />
+	</Target>
+</Project>

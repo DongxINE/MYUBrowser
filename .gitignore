@@ -1,0 +1,23 @@
+# ---- 生成/编译产物 ----
+bin/
+obj/
+publish/
+[Rr]eleases/
+*.user
+
+# ---- Visual Studio ----
+.vs/
+*.suo
+*.userprefs
+
+# ---- 应用运行数据（便携目录：设置与 WebView2 缓存）----
+Data/
+**/Data/
+
+# ---- 发布配置里的本机信息 ----
+*.pubxml.user
+
+# ---- 其他 ----
+*.log
+Thumbs.db
+.DS_Store
