@@ -1,3 +1,8 @@
+using MYUBrowser.App;
+using MYUBrowser.App.Features;
+using MYUBrowser.Core;
+using MYUBrowser.UI;
+using MYUBrowser.Views;
 using Velopack;
 
 namespace MYUBrowser;
@@ -14,6 +19,20 @@ internal static class Program
         if (!createdNew) return;
 
         ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm());
+
+        var host = new AppHost();
+
+        // 共享待办存储：番茄钟与截止提醒共用同一份数据
+        var todos = TodoStore.Load();
+
+        var pomodoro = new PomodoroFeature(host.Settings, todos);
+        host.AddFeature(pomodoro);
+        host.AddFeature(new TaskReminderFeature(host.Settings, todos));
+
+        // 拓展轴 A：注册内容界面（新增界面只需加一行）
+        host.RegisterView(new ContentKind("browser", "浏览器", "🌐", s => new BrowserView(s)));
+        host.RegisterView(new ContentKind("pomodoro", "番茄钟", "🍅", s => new PomodoroView(s, pomodoro)));
+
+        host.Run(defaultViewId: "browser");
     }
 }

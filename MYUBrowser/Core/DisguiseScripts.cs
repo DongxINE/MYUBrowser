@@ -60,19 +60,53 @@ public static class DisguiseScripts
             """;
     }
 
-    /// <summary>随文档创建注入的快捷键监听：Ctrl+↑/↓ 调透明度、Ctrl+M 极简模式</summary>
-    public const string HotkeyListener = """
-        window.addEventListener('keydown', function (e) {
-            if (!e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return;
-            var cmd = null;
-            if (e.key === 'ArrowUp') cmd = 'opacity-up';
-            else if (e.key === 'ArrowDown') cmd = 'opacity-down';
-            else if (e.key === 'm' || e.key === 'M') cmd = 'minimal';
-            if (cmd) {
-                e.preventDefault();
-                e.stopPropagation();
-                try { window.chrome.webview.postMessage('myu:' + cmd); } catch (err) { }
-            }
-        }, true);
-        """;
+    /// <summary>
+    /// 按当前快捷键绑定动态生成网页内监听脚本：命中则 postMessage('myu:cmd:&lt;id&gt;')。
+    /// 脚本可重复注入（会先移除上一版监听，避免重复触发）。
+    /// </summary>
+    public static string BuildHotkeyListener(IEnumerable<(string Id, Keys Gesture)> bindings)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("(function(){");
+        sb.Append("if(window.__myuHK){try{window.removeEventListener('keydown',window.__myuHK,true);}catch(e){}}");
+        sb.Append("window.__myuHK=function(e){");
+        foreach (var (id, g) in bindings)
+        {
+            string? keyCond = JsKeyCondition(g & Keys.KeyCode);
+            if (keyCond == null) continue;
+            string ctrl = ((g & Keys.Control) != 0) ? "true" : "false";
+            string alt = ((g & Keys.Alt) != 0) ? "true" : "false";
+            string shift = ((g & Keys.Shift) != 0) ? "true" : "false";
+            sb.Append($"if(e.ctrlKey==={ctrl}&&e.altKey==={alt}&&e.shiftKey==={shift}&&{keyCond}){{");
+            sb.Append("e.preventDefault();e.stopPropagation();");
+            sb.Append($"try{{window.chrome.webview.postMessage('myu:cmd:{id}');}}catch(err){{}}return;}}");
+        }
+        sb.Append("};");
+        sb.Append("window.addEventListener('keydown',window.__myuHK,true);");
+        sb.Append("})();");
+        return sb.ToString();
+    }
+
+    /// <summary>把键位转成 JS 中对 e.key 的判断；无法映射的返回 null（该键仅在应用聚焦时生效）。</summary>
+    private static string? JsKeyCondition(Keys key)
+    {
+        switch (key)
+        {
+            case Keys.Up: return "e.key==='ArrowUp'";
+            case Keys.Down: return "e.key==='ArrowDown'";
+            case Keys.Left: return "e.key==='ArrowLeft'";
+            case Keys.Right: return "e.key==='ArrowRight'";
+        }
+        if (key >= Keys.A && key <= Keys.Z)
+        {
+            char c = (char)('a' + (key - Keys.A));
+            return $"(e.key==='{c}'||e.key==='{char.ToUpper(c)}')";
+        }
+        if (key >= Keys.D0 && key <= Keys.D9)
+        {
+            char c = (char)('0' + (key - Keys.D0));
+            return $"e.key==='{c}'";
+        }
+        return null;
+    }
 }

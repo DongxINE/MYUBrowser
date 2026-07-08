@@ -7,9 +7,9 @@ public sealed class SettingsForm : Form
     private readonly AppSettings _settings;
     private readonly Func<long> _getCacheSize;
     private readonly Func<Task> _clearCache;
+    private readonly Action<IWin32Window> _openShortcuts;
 
     private readonly TextBox _homeBox = new();
-    private readonly TextBox _hotkeyBox = new() { ReadOnly = true };
     private readonly CheckBox _darkCheck = new() { Text = "强制深色（测试-反色滤镜，适配无深色模式的网站）", AutoSize = true };
     private readonly CheckBox _hideImgCheck = new() { Text = "淡化图片/视频（测试-页面更像纯文字）", AutoSize = true };
     private readonly CheckBox _fakeTitleCheck = new() { Text = "伪装窗口标题", AutoSize = true };
@@ -34,17 +34,12 @@ public sealed class SettingsForm : Form
     private static readonly Color TextSuccess = Color.FromArgb(130, 190, 130);
     private static readonly Color TextError = Color.FromArgb(220, 110, 110);
 
-    private uint _recModifiers;
-    private uint _recVk;
-
-    public SettingsForm(AppSettings settings, Func<long> getCacheSize, Func<Task> clearCache)
+    public SettingsForm(AppSettings settings, Func<long> getCacheSize, Func<Task> clearCache, Action<IWin32Window> openShortcuts)
     {
         _settings = settings;
         _getCacheSize = getCacheSize;
         _clearCache = clearCache;
-
-        _recModifiers = settings.BossKeyModifiers;
-        _recVk = settings.BossKeyVirtualKey;
+        _openShortcuts = openShortcuts;
 
         BuildUi();
         LoadValues();
@@ -52,7 +47,7 @@ public sealed class SettingsForm : Form
 
     private void BuildUi()
     {
-        Text = "设置";
+        Text = "浏览器设置";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -68,7 +63,7 @@ public sealed class SettingsForm : Form
         this.MinimumSize = new Size(450, 0);
 
 
-        foreach (var tb in new[] { _homeBox, _hotkeyBox, _fakeTitleBox })
+        foreach (var tb in new[] { _homeBox, _fakeTitleBox })
         {
             tb.BackColor = Color.FromArgb(56, 56, 56);
             tb.ForeColor = Color.Gainsboro;
@@ -113,19 +108,20 @@ public sealed class SettingsForm : Form
         // 主页
         AddRow("主页", _homeBox);
 
-        // 老板键录制
-        _hotkeyBox.Cursor = Cursors.Hand;
-        _hotkeyBox.GotFocus += (_, _) => _hotkeyBox.BackColor = Color.FromArgb(70, 70, 90);
-        _hotkeyBox.LostFocus += (_, _) => _hotkeyBox.BackColor = Color.FromArgb(56, 56, 56);
-        _hotkeyBox.KeyDown += OnHotkeyRecord;
-        AddRow("老板键", _hotkeyBox);
-        var hint = new Label
+        // 快捷键设置入口
+        var shortcutsBtn = new Button { Text = "快捷键设置…", FlatStyle = FlatStyle.Flat, AutoSize = true };
+        shortcutsBtn.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+        shortcutsBtn.Click += (_, _) => _openShortcuts(this);
+        var shortcutsPanel = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
+        shortcutsPanel.Controls.Add(shortcutsBtn);
+        shortcutsPanel.Controls.Add(new Label
         {
-            Text = "点击上方输入框后直接按组合键录制（需包含 Ctrl/Alt/Shift）",
+            Text = "老板键、透明度、极简模式等全部可自定义",
             AutoSize = true,
             ForeColor = TextMuted,
-        };
-        AddFullRow(hint);
+            Margin = new Padding(8, 8, 0, 0),
+        });
+        AddRow("快捷键", shortcutsPanel);
 
         // 网页缩放：滑动条 + 输入框联动
         _zoomTrack.BackColor = Color.FromArgb(37, 37, 38);
@@ -262,30 +258,9 @@ public sealed class SettingsForm : Form
         Controls.Add(btnPanel);
     }
 
-    private void OnHotkeyRecord(object? sender, KeyEventArgs e)
-    {
-        e.SuppressKeyPress = true;
-        e.Handled = true;
-
-        // 忽略单独按下的修饰键
-        if (e.KeyCode is Keys.ControlKey or Keys.Menu or Keys.ShiftKey or Keys.LWin or Keys.RWin) return;
-
-        uint mods = HotkeyManager.ToModifiers(e.KeyData);
-        if (mods == 0)
-        {
-            _hotkeyBox.Text = "必须包含 Ctrl / Alt / Shift 修饰键";
-            return;
-        }
-
-        _recModifiers = mods;
-        _recVk = (uint)e.KeyCode;
-        _hotkeyBox.Text = HotkeyManager.Describe(_recModifiers, _recVk);
-    }
-
     private void LoadValues()
     {
         _homeBox.Text = _settings.HomeUrl;
-        _hotkeyBox.Text = HotkeyManager.Describe(_settings.BossKeyModifiers, _settings.BossKeyVirtualKey);
         int zoomPct = Math.Clamp((int)Math.Round(_settings.ZoomFactor * 100), 25, 400);
         _zoomInput.Value = zoomPct;
         _zoomTrack.Value = zoomPct;
@@ -304,8 +279,6 @@ public sealed class SettingsForm : Form
     private void SaveValues()
     {
         if (!string.IsNullOrWhiteSpace(_homeBox.Text)) _settings.HomeUrl = _homeBox.Text.Trim();
-        _settings.BossKeyModifiers = _recModifiers;
-        _settings.BossKeyVirtualKey = _recVk;
         _settings.ZoomFactor = (double)_zoomInput.Value / 100.0;
         _settings.ForceDarkFilter = _darkCheck.Checked;
         _settings.HideImages = _hideImgCheck.Checked;

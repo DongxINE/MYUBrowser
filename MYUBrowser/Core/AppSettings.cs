@@ -51,13 +51,30 @@ public sealed class AppSettings
     public bool AutoDimOnMouseLeave { get; set; }
     public int AutoDimOpacityPercent { get; set; } = 20;
 
-    // ---- 老板键（默认 Alt+Q）----
+    // ---- 老板键（默认 Alt+Q，作为快捷键系统 boss.toggle 的兼容字段）----
     public uint BossKeyModifiers { get; set; } = HotkeyManager.MOD_ALT;
     public uint BossKeyVirtualKey { get; set; } = (uint)Keys.Q;
+
+    // ---- 快捷键绑定：命令 Id -> (int)Keys；缺省项回退到命令默认键 ----
+    public Dictionary<string, int> ShortcutBindings { get; set; } = new();
 
     // ---- 行为 ----
     public bool CloseToTray { get; set; }
     public bool Muted { get; set; }
+
+    // ---- 番茄钟 ----
+    public bool PomodoroNotify { get; set; } = true;         // 阶段切换托盘提醒
+    public int PomodoroMinutes { get; set; } = 25;           // 专注时长（分钟）
+    public int PomodoroBreakMinutes { get; set; } = 5;       // 短休息（分钟）
+    public int PomodoroLongBreakMinutes { get; set; } = 15;  // 长休息（分钟）
+    public int PomodorosPerLongBreak { get; set; } = 4;      // 每几个专注后长休息
+    public bool PomodoroAutoStartNext { get; set; }          // 阶段结束自动开始下一段
+    public bool PomodoroDimOnFocus { get; set; }             // 专注期自动降低透明度
+    public int PomodoroFocusDimOpacity { get; set; } = 40;   // 专注期目标透明度
+
+    // ---- 待办截止提醒 ----
+    public bool TodoRemindEnabled { get; set; } = true;      // 临近截止弹托盘提醒
+    public int TodoReminderLeadMinutes { get; set; } = 60;   // 提前多少分钟提醒
 
     // ---- 缓存/性能 ----
     public bool ClearCacheOnExit { get; set; } = true;
