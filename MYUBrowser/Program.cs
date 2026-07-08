@@ -31,6 +31,7 @@ internal static class Program
 
         // 拓展轴 A：注册内容界面（新增界面只需加一行）
         host.RegisterView(new ContentKind("browser", "浏览器", "🌐", s => new BrowserView(s)));
+        host.RegisterView(new ContentKind("reader", "阅读器", "📖", s => new ReaderView(s)));
         host.RegisterView(new ContentKind("pomodoro", "番茄钟", "🍅", s => new PomodoroView(s, pomodoro)));
 
         host.Run(defaultViewId: "browser");

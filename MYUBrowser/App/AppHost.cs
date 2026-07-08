@@ -40,6 +40,7 @@ public sealed class AppHost : IDisposable
             ExecuteShortcut = ExecuteShortcut,
             Shortcuts = _shortcuts,
             ShowModalDialog = ShowModal,
+            ShowFileDialog = ShowCommonDialog,
         };
     }
 
@@ -53,6 +54,17 @@ public sealed class AppHost : IDisposable
         bool wasTopMost = _shell.TopMost;
         _shell.TopMost = false;
         dlg.TopMost = true;
+        var result = dlg.ShowDialog(_shell);
+        _shell.TopMost = wasTopMost;
+        return result;
+    }
+
+    /// <summary>以 Shell 为父安全弹出通用对话框（文件选择等），临时解除 TopMost。</summary>
+    public DialogResult ShowCommonDialog(CommonDialog dlg)
+    {
+        if (_shell == null) return dlg.ShowDialog();
+        bool wasTopMost = _shell.TopMost;
+        _shell.TopMost = false;
         var result = dlg.ShowDialog(_shell);
         _shell.TopMost = wasTopMost;
         return result;
@@ -238,11 +250,28 @@ public sealed class AppHost : IDisposable
         }
     }
 
+    /// <summary>打开阅读器设置（与浏览器/番茄钟设置分离）。</summary>
+    public void OpenReaderSettings()
+    {
+        if (_shell == null) return;
+
+        using var dlg = new ReaderSettingsForm(_settings);
+        if (ShowModal(dlg) == DialogResult.OK)
+        {
+            _settings.Save();
+            _services.NotifySettingsApplied();
+        }
+    }
+
     /// <summary>按当前活动界面打开对应设置页。</summary>
     public void OpenSettingsFor(string? activeViewId)
     {
-        if (activeViewId == "pomodoro") OpenPomodoroSettings();
-        else OpenSettings();
+        switch (activeViewId)
+        {
+            case "pomodoro": OpenPomodoroSettings(); break;
+            case "reader": OpenReaderSettings(); break;
+            default: OpenSettings(); break;
+        }
     }
 
     /// <summary>打开统一的快捷键设置对话框。</summary>

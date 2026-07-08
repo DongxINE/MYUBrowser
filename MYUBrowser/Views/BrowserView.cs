@@ -35,6 +35,9 @@ public sealed class BrowserView : UserControl, IContentView, IShortcutHandler
     private string _title = "MYU Browser";
     private string? _hotkeyScriptId;
 
+    // 缩放防抖：Ctrl+滚轮会高频触发，停止 ~600ms 后再落盘，避免频繁写 settings.json
+    private readonly System.Windows.Forms.Timer _zoomSaveTimer = new() { Interval = 600 };
+
     public BrowserView(AppServices services)
     {
         _services = services;
@@ -159,11 +162,18 @@ public sealed class BrowserView : UserControl, IContentView, IShortcutHandler
                 core.Navigate(e.Uri);
         };
 
+        _zoomSaveTimer.Tick += (_, _) =>
+        {
+            _zoomSaveTimer.Stop();
+            _settings.ZoomFactor = _webView.ZoomFactor;
+            _settings.Save();
+        };
         _webView.ZoomFactorChanged += (_, _) =>
         {
             _zoomLabel.Text = $"{(int)Math.Round(_webView.ZoomFactor * 100)}%";
-            _settings.ZoomFactor = _webView.ZoomFactor;
-            _settings.Save();
+            // 每次变动重置计时，停止滚动后统一保存一次
+            _zoomSaveTimer.Stop();
+            _zoomSaveTimer.Start();
         };
         _webView.ZoomFactor = Math.Clamp(_settings.ZoomFactor, 0.25, 4.0);
         _zoomLabel.Text = $"{(int)Math.Round(_webView.ZoomFactor * 100)}%";
@@ -203,6 +213,7 @@ public sealed class BrowserView : UserControl, IContentView, IShortcutHandler
 
     public void OnSuspended()
     {
+        FlushZoomSave();
         if (_webReady && !_suspended)
         {
             try { _ = _webView.CoreWebView2.TrySuspendAsync(); } catch { }
@@ -210,8 +221,21 @@ public sealed class BrowserView : UserControl, IContentView, IShortcutHandler
         }
     }
 
+    /// <summary>若有待保存的缩放值，立即落盘（切走/隐藏/退出时调用）。</summary>
+    private void FlushZoomSave()
+    {
+        if (!_zoomSaveTimer.Enabled) return;
+        _zoomSaveTimer.Stop();
+        if (_webReady)
+        {
+            _settings.ZoomFactor = _webView.ZoomFactor;
+            _settings.Save();
+        }
+    }
+
     public async Task OnHidingAsync()
     {
+        FlushZoomSave();
         if (!_webReady) return;
         try
         {
@@ -390,4 +414,15 @@ public sealed class BrowserView : UserControl, IContentView, IShortcutHandler
     }
 
     private static string Truncate(string s, int len) => s.Length <= len ? s : s[..len] + "…";
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            FlushZoomSave();
+            _zoomSaveTimer.Dispose();
+            _services.SettingsApplied -= ApplySettings;
+        }
+        base.Dispose(disposing);
+    }
 }

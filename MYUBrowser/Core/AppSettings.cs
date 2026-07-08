@@ -76,6 +76,14 @@ public sealed class AppSettings
     public bool TodoRemindEnabled { get; set; } = true;      // 临近截止弹托盘提醒
     public int TodoReminderLeadMinutes { get; set; } = 60;   // 提前多少分钟提醒
 
+    // ---- 阅读器 ----
+    public int ReaderFontSize { get; set; } = 18;                 // 正文字号（pt）
+    public int ReaderTextColor { get; set; } = unchecked((int)0xFFDCDCDC); // 文字色 ARGB
+    public int ReaderBackColor { get; set; } = unchecked((int)0xFF141414); // 背景色 ARGB
+    public string? ReaderLastFile { get; set; }                   // 上次打开的文件
+    public int ReaderLastCharOffset { get; set; }                 // 上次阅读到的字符偏移
+    public int ReaderLineSpacing { get; set; } = 8;               // 行间距（px）
+
     // ---- 缓存/性能 ----
     public bool ClearCacheOnExit { get; set; } = true;
     public int DiskCacheLimitMB { get; set; } = 100;

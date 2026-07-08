@@ -33,6 +33,9 @@ public sealed class AppServices
     /// <summary>以 Shell 为父安全弹出模态对话框（处理 TopMost）。由 AppHost 赋值。</summary>
     public Func<Form, DialogResult> ShowModalDialog { get; set; } = d => d.ShowDialog();
 
+    /// <summary>以 Shell 为父安全弹出通用对话框（如文件选择，处理 TopMost）。由 AppHost 赋值。</summary>
+    public Func<CommonDialog, DialogResult> ShowFileDialog { get; set; } = d => d.ShowDialog();
+
     /// <summary>清理缓存的实现（由持有 WebView 的视图注册）。</summary>
     public Func<Task>? ClearCacheHandler { get; set; }
 
